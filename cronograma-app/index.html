@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Project Control Center</title>
+<style>
+  :root{
+    --bg: #ffffff;
+    --panel: #ffffff;
+    --panel2: #eef4f9;
+    --line: #dfe6ed;
+    --text: #14181c;
+    --muted: #6b7580;
+    --accent: #0b68b2;
+    --accent-dim: #0b68b214;
+    --ok: #1a8f5e;
+    --ok-dim: #1a8f5e14;
+    --late: #c8402a;
+    --late-dim: #c8402a14;
+    --plan: #0b68b2;
+    --plan-dim: #0b68b214;
+    --warn: #b8860b;
+    --mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+    --sans: 'Inter', 'Helvetica Neue', Arial, 'Segoe UI', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--sans); -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:0 20px 80px;}
+
+  /* barra utilitária fina no topo, com marca pequena */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:9px 20px; border-bottom:1px solid var(--line); background:var(--panel2);
+    margin:0 -20px 0; font-family:var(--mono); font-size:11px; color:var(--muted);
+    letter-spacing:.03em;
+  }
+  .topbar .tb-left{display:flex; align-items:center; gap:8px;}
+  .topbar img{height:16px; display:block; opacity:.85;}
+  .topbar .tb-right{color:var(--muted);}
+
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1px solid var(--line); padding:22px 0 18px; margin-bottom:24px;
+    flex-wrap:wrap; gap:16px;
+  }
+  .brand{display:flex; align-items:center; gap:16px;}
+  .brand img.logo{height:52px; display:block;}
+  .brand .divider{width:1px; height:34px; background:var(--line);}
+  h1{font-size:19px; margin:0; font-weight:700; letter-spacing:-.01em; color:var(--text);}
+  .sub{color:var(--muted); font-size:12px; margin-top:4px; font-family:var(--mono);}
+  .tabs{display:flex; gap:22px;}
+  .tab{
+    font-family:var(--sans); font-size:12.5px; letter-spacing:.06em; text-transform:uppercase;
+    background:transparent; border:0; border-bottom:2px solid transparent; color:var(--muted);
+    padding:6px 2px 10px; cursor:pointer; transition:.15s; font-weight:600;
+  }
+  .tab.active{color:var(--accent); border-bottom-color:var(--accent);}
+  .tab:hover:not(.active){color:var(--text);}
+
+  .cards{display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:12px; margin-bottom:24px;}
+  .card{background:var(--panel2); border:1px solid var(--line); border-radius:4px; padding:14px 16px;}
+  .card .num{font-family:var(--mono); font-size:26px; font-weight:600; color:var(--text);}
+  .card .lbl{color:var(--muted); font-size:11px; margin-top:4px; text-transform:uppercase; letter-spacing:.06em;}
+  .card.ok .num{color:var(--ok);}
+  .card.late .num{color:var(--late);}
+  .card.warn .num{color:var(--warn);}
+
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:4px; overflow:hidden; margin-bottom:20px;}
+  .panel-h{
+    padding:12px 16px; border-bottom:1px solid var(--line); font-size:13px; font-weight:700;
+    display:flex; justify-content:space-between; align-items:center;
+    background:var(--panel2);
+  }
+  .panel-h .cnt{color:var(--muted); font-family:var(--mono); font-weight:400; font-size:11.5px;}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{
+    text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--muted); padding:9px 12px; border-bottom:1px solid var(--line); font-weight:700;
+    white-space:nowrap;
+  }
+  td{padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:var(--panel2);}
+  .id{font-family:var(--mono); color:var(--muted); font-size:12px;}
+  .name{font-weight:600;}
+  .resp{color:var(--muted); font-size:12px;}
+  .dates{font-family:var(--mono); font-size:11.5px; color:var(--muted); white-space:nowrap;}
+
+  .status{
+    display:inline-flex; align-items:center; gap:5px; font-size:11px; font-family:var(--mono);
+    padding:3px 8px; border-radius:3px; white-space:nowrap;
+  }
+  .status.concluido{background:var(--ok-dim); color:var(--ok);}
+  .status.planejado{background:var(--plan-dim); color:var(--plan);}
+  .status.atrasado{background:var(--late-dim); color:var(--late);}
+
+  .dev{font-family:var(--mono); font-size:11.5px;}
+  .dev.pos{color:var(--late);}
+  .dev.neg{color:var(--ok);}
+  .dev.zero{color:var(--muted);}
+
+  input[type=checkbox]{width:16px; height:16px; accent-color:var(--accent); cursor:pointer;}
+  input.pct{
+    width:52px; background:#fff; border:1px solid var(--line); color:var(--text);
+    font-family:var(--mono); font-size:12px; padding:4px 6px; border-radius:3px; text-align:right;
+  }
+  input.pct:focus{outline:none; border-color:var(--accent);}
+  input.date-input{
+    width:128px; background:#fff; border:1px solid var(--line); color:var(--text);
+    font-family:var(--mono); font-size:12px; padding:4px 6px; border-radius:3px;
+  }
+  input.date-input:focus{outline:none; border-color:var(--accent);}
+  input.date-input.unset{color:var(--muted); border-style:dashed;}
+
+  .bar-bg{width:100%; background:var(--line); border-radius:3px; height:6px; overflow:hidden;}
+  .bar-fg{height:100%; background:var(--accent); border-radius:3px; transition:width .2s;}
+
+  .empty{padding:40px 16px; text-align:center; color:var(--muted); font-size:13px;}
+  .foot-note{color:var(--muted); font-size:11.5px; margin-top:18px; line-height:1.6; font-family:var(--mono);}
+  .save-flag{
+    position:fixed; bottom:18px; right:18px; background:var(--text); border:1px solid var(--text);
+    color:#fff; font-family:var(--mono); font-size:11px; padding:7px 12px; border-radius:4px;
+    opacity:0; transform:translateY(6px); transition:.25s; pointer-events:none;
+  }
+  .save-flag.show{opacity:1; transform:translateY(0);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="tb-left">
+      <img src="data:image/png;base64,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" alt="Purem">
+      <span>PMO · Schedule Management</span>
+    </div>
+    <div class="tb-right" id="topbarRight"></div>
+  </div>
+
+  <header>
+    <div class="brand">
+      <img class="logo" src="data:image/png;base64,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" alt="Purem by Eberspächer">
+      <div class="divider"></div>
+      <div>
+        <h1>Project Control Center</h1>
+        <div class="sub" id="headerSub">carregando…</div>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="overview">Visão Geral</button>
+      <button class="tab" data-tab="project">Por Projeto</button>
+    </div>
+  </header>
+
+  <div id="overviewView"></div>
+  <div id="projectView" style="display:none;"></div>
+
+  <div class="foot-note" id="footNote"></div>
+</div>
+
+<div class="save-flag" id="saveFlag">salvo</div>
+
+<script>
+const STORAGE_PROJECTS_KEY = 'projects:list';
+const taskKey = (pid) => `tasks:${pid}`;
+
+// ---------- Normalização (compatível com dados antigos já salvos) ----------
+function normalizeTask(t){
+  return {
+    id: String(t.id),
+    name: t.name,
+    resp: t.resp || '',
+    level: t.level || 0,
+    isContainer: !!t.isContainer,
+    na: !!t.na,
+    baselineStart: t.baselineStart || null,
+    baselineEnd: t.baselineEnd || null,
+    currentStart: t.currentStart || null,
+    currentEnd: t.currentEnd || (t.actualDate || null),
+    previousEnd: t.previousEnd || null,
+    currentPercent: t.na ? null : (t.currentPercent != null ? t.currentPercent : (t.done ? 100 : 0))
+  };
+}
+
+// ---------- Seeds ----------
+const SEED_PROJECT_1 = { id: "YP.26.00.000", name: "Bancada de pesagem — Rooving (Purem)" };
+const SEED_TASKS_1 = [
+ {"id":"1","name":"Pré-projeto Mecânico","resp":"Fornecedor","baselineStart":"2026-07-13","baselineEnd":"2026-08-09","currentStart":"2026-07-13","currentEnd":"2026-08-09","currentPercent":100},
+ {"id":"2","name":"Realizar análise crítica de pré-projeto","resp":"Cliente","baselineStart":"2026-07-27","baselineEnd":"2026-08-02","currentStart":"2026-07-27","currentEnd":"2026-08-02","currentPercent":100},
+ {"id":"3","name":"Design Review 01","resp":"Fornecedor","baselineStart":"2026-08-03","baselineEnd":"2026-08-09","currentStart":"2026-08-03","currentEnd":"2026-08-09","currentPercent":100},
+ {"id":"4","name":"Adequar e detalhar projeto","resp":"Fornecedor","baselineStart":"2026-08-10","baselineEnd":"2026-08-23","currentPercent":0},
+ {"id":"5","name":"Compra de material mecânico","resp":"Fornecedor","baselineStart":"2026-08-17","baselineEnd":"2026-08-30","currentPercent":0},
+ {"id":"6","name":"Usinagem","resp":"Fornecedor","baselineStart":"2026-08-24","baselineEnd":"2026-09-06","currentPercent":0},
+ {"id":"7","name":"Projeto Elétrico","resp":"Fornecedor","baselineStart":"2026-08-17","baselineEnd":"2026-08-23","currentPercent":0},
+ {"id":"8","name":"Análise e aprovação do esquema elétrico","resp":"Fornecedor / Cliente","baselineStart":"2026-08-17","baselineEnd":"2026-08-23","currentPercent":0},
+ {"id":"9","name":"Compra de material eletro-eletrônico","resp":"Fornecedor","baselineStart":"2026-08-17","baselineEnd":"2026-08-23","currentPercent":0},
+ {"id":"10","name":"Projeto Pneum/Hidrául.","resp":"Fornecedor","baselineStart":"2026-08-17","baselineEnd":"2026-08-23","currentPercent":0},
+ {"id":"11","name":"Análise e aprovação Proj.Pneum/Hidraul.","resp":"Fornecedor / Cliente","baselineStart":"2026-08-17","baselineEnd":"2026-08-23","currentPercent":0},
+ {"id":"12","name":"Compra de material Pneum/Hidraul.","resp":"Fornecedor","baselineStart":"2026-08-24","baselineEnd":"2026-08-30","currentPercent":0},
+ {"id":"13","name":"Compra de materiais gerais","resp":"Fornecedor","baselineStart":"2026-08-24","baselineEnd":"2026-08-30","currentPercent":0},
+ {"id":"14","name":"Montagem Mecânica","resp":"Fornecedor","baselineStart":"2026-08-31","baselineEnd":"2026-09-13","currentPercent":0},
+ {"id":"15","name":"Montagem Pneumática","resp":"Fornecedor","baselineStart":"2026-09-07","baselineEnd":"2026-09-13","currentPercent":0},
+ {"id":"16","name":"Montagem Eletro-eletrônica","resp":"Fornecedor","baselineStart":"2026-09-07","baselineEnd":"2026-09-13","currentPercent":0},
+ {"id":"17","name":"Envio Peças/Componentes para ajuste dispositivos","resp":"Cliente","baselineStart":"2026-08-31","baselineEnd":"2026-09-06","currentPercent":0},
+ {"id":"18","name":"Ajustes de Montagem Mecânica","resp":"Fornecedor","baselineStart":"2026-09-07","baselineEnd":"2026-09-20","currentPercent":0},
+ {"id":"19","name":"Avaliação dimensional e testes","resp":"Fornecedor / Cliente","baselineStart":"2026-09-14","baselineEnd":"2026-09-20","currentPercent":0},
+ {"id":"20","name":"Adequações e correções","resp":"Fornecedor","baselineStart":"2026-09-14","baselineEnd":"2026-09-20","currentPercent":0},
+ {"id":"21","name":"Embarque Equipamento","resp":"Fornecedor","baselineStart":"2026-09-21","baselineEnd":"2026-09-27","currentPercent":0},
+ {"id":"22","name":"Liberação para transporte","resp":"Cliente","baselineStart":"2026-09-21","baselineEnd":"2026-09-27","currentPercent":0},
+ {"id":"23","name":"Descarga e ligação da infra no equipamento","resp":"Cliente","baselineStart":"2026-09-21","baselineEnd":"2026-09-27","currentPercent":0},
+ {"id":"24","name":"Integração do equipamento e try out","resp":"Fornecedor / Cliente","baselineStart":"2026-09-21","baselineEnd":"2026-09-27","currentPercent":0},
+ {"id":"25","name":"Lote Piloto na base do Cliente","resp":"Fornecedor / Cliente","baselineStart":"2026-09-21","baselineEnd":"2026-09-27","currentPercent":0},
+ {"id":"26","name":"Ajustes finais","resp":"Fornecedor","baselineStart":"2026-09-21","baselineEnd":"2026-09-27","currentPercent":0},
+ {"id":"27","name":"Treinamento","resp":"Fornecedor","baselineStart":"2026-09-21","baselineEnd":"2026-09-27","currentPercent":0},
+ {"id":"28","name":"Entrega da documentação técnica","resp":"Fornecedor","baselineStart":"2026-10-05","baselineEnd":"2026-10-11","currentPercent":0},
+ {"id":"29","name":"Conclusão","resp":"Fornecedor / Cliente","baselineStart":"2026-10-05","baselineEnd":"2026-10-11","currentPercent":0}
+].map(normalizeTask);
+
+const SEED_PROJECT_2 = { id: "RFQ_00146", name: "Dispositivo de Estanqueidade — Toyota 654D (OX's Automação)" };
+const SEED_TASKS_2 = [
+ {"id":"1","name":"KICK OFF","resp":"Engenharia","baselineStart":"2026-06-19","baselineEnd":"2026-06-19","currentStart":"2026-06-19","currentEnd":"2026-06-19","currentPercent":100},
+ {"id":"2","name":"PLANEJAMENTO","resp":"Engenharia","baselineStart":"2026-06-22","baselineEnd":"2026-06-26","currentStart":"2026-06-22","currentEnd":"2026-06-26","currentPercent":100},
+ {"id":"3","name":"ESTUDO DE ESCOPO E PROJETO MEC.","resp":"Engenharia","baselineStart":"2026-06-22","baselineEnd":"2026-06-26","currentStart":"2026-06-22","currentEnd":"2026-06-26","currentPercent":100},
+ {"id":"4","name":"AGUARDANDO ENVIO DO 3D PRODUTOS","resp":"Purem","baselineStart":"2026-06-19","baselineEnd":"2026-06-25","currentStart":"2026-06-19","currentEnd":"2026-06-25","currentPercent":100},
+ {"id":"5","name":"AGUARDANDO DESENHO DISP. / MEDIÇÃO IN LOCO","resp":"Purem / OX's","baselineStart":"2026-06-29","baselineEnd":"2026-07-07","currentStart":"2026-06-29","currentEnd":"2026-07-07","currentPercent":100},
+ {"id":"6","name":"DESIGN REVIEW 1 — APROVAÇÃO DE CONCEITO PROJETO","resp":"Engenharia","baselineStart":"2026-07-01","baselineEnd":"2026-07-03","currentStart":"2026-07-08","currentEnd":"2026-07-16","currentPercent":100},
+ {"id":"7","name":"DESIGN REVIEW 2","resp":"Engenharia","baselineStart":"2026-07-04","baselineEnd":"2026-07-07","currentStart":"2026-07-17","currentEnd":"2026-07-20","currentPercent":100},
+ {"id":"8","name":"REVISÃO E REFINAMENTO TÉCNICO","resp":"Engenharia","baselineStart":"2026-07-08","baselineEnd":"2026-07-14","currentStart":"2026-07-21","currentEnd":"2026-07-27","currentPercent":100},
+ {"id":"9","name":"DETALHAMENTO","resp":"Engenharia","baselineStart":"2026-07-13","baselineEnd":"2026-07-17","currentStart":"2026-07-26","currentEnd":"2026-07-30","currentPercent":100},
+ {"id":"10","name":"LIBERAÇÃO DE LISTA MC, PN, HD, MP","resp":"Engenharia","baselineStart":"2026-07-18","baselineEnd":"2026-07-21","currentStart":"2026-07-31","currentEnd":"2026-08-03","currentPercent":100},
+ {"id":"11","name":"ALINHAMENTO ELÉTRICA","resp":"Engenharia","baselineStart":"2026-07-08","baselineEnd":"2026-07-09","currentStart":"2026-07-21","currentEnd":"2026-07-22","currentPercent":100},
+ {"id":"12","name":"LISTA ELÉTRICA/DIAGRAMA","resp":"Engenharia","na":true},
+ {"id":"13","name":"MATERIAIS E RECURSOS","resp":"Compras","isContainer":true,"baselineStart":"2026-07-22","baselineEnd":"2026-08-04","currentPercent":60},
+ {"id":"14","name":"Cotação de matéria prima","resp":"Compras","level":1,"baselineStart":"2026-07-21","baselineEnd":"2026-07-24","currentStart":"2026-08-03","currentEnd":"2026-08-06","currentPercent":100},
+ {"id":"15","name":"Cotação de serviços de manufatura","resp":"Compras","level":1,"baselineStart":"2026-07-21","baselineEnd":"2026-07-24","currentStart":"2026-08-03","currentEnd":"2026-08-06","currentPercent":100},
+ {"id":"16","name":"Cotação de itens comerciais","resp":"Compras","level":1,"baselineStart":"2026-07-21","baselineEnd":"2026-07-24","currentStart":"2026-08-03","currentEnd":"2026-08-06","currentPercent":100},
+ {"id":"17","name":"Entrega de matéria prima","resp":"Compras","level":1,"baselineStart":"2026-07-25","baselineEnd":"2026-08-06","currentStart":"2026-08-07","currentEnd":"2026-08-19","currentPercent":60},
+ {"id":"18","name":"Entrega de itens comerciais","resp":"Compras","level":1,"baselineStart":"2026-07-27","baselineEnd":"2026-08-07","currentStart":"2026-08-09","currentEnd":"2026-08-20","currentPercent":0},
+ {"id":"19","name":"Entrega de peças de manufatura","resp":"Compras","level":1,"baselineStart":"2026-08-07","baselineEnd":"2026-08-17","currentStart":"2026-08-20","currentEnd":"2026-08-30","currentPercent":0},
+ {"id":"20","name":"FORNECIMENTO DE MOLDES PARA INJEÇÃO DE BORRACHAS","resp":"Purem","baselineStart":"2026-08-03","baselineEnd":"2026-08-10","currentStart":"2026-08-16","currentEnd":"2026-08-23","currentPercent":0},
+ {"id":"21","name":"MONTAGEM MEC.","resp":"Montagem","baselineStart":"2026-08-18","baselineEnd":"2026-08-20","currentStart":"2026-08-31","currentEnd":"2026-09-02","currentPercent":0},
+ {"id":"22","name":"MONTAGEM PAINEL ELÉTRICO","resp":"Montagem","na":true},
+ {"id":"23","name":"MONTAGEM PNEUM.","resp":"Montagem","na":true},
+ {"id":"24","name":"PASSAGEM DE CABOS E INTERLIGAÇÃO","resp":"Montagem","na":true},
+ {"id":"25","name":"PROGRAMAÇÃO ONLINE","resp":"Engenharia","na":true},
+ {"id":"26","name":"TRYOUT INTERNO","resp":"Montagem","baselineStart":"2026-08-21","baselineEnd":"2026-08-21","currentStart":"2026-09-03","currentEnd":"2026-09-03","currentPercent":0},
+ {"id":"27","name":"TRYOUT COM O CLIENTE NA PLANTA DA OX'S","resp":"Montagem","baselineStart":"2026-08-22","baselineEnd":"2026-08-24","currentStart":"2026-09-04","currentEnd":"2026-09-06","currentPercent":0},
+ {"id":"28","name":"CORREÇÕES PÓS TRYOUT","resp":"Montagem","baselineStart":"2026-08-25","baselineEnd":"2026-08-25","currentStart":"2026-09-07","currentEnd":"2026-09-07","currentPercent":0},
+ {"id":"29","name":"ENTREGA","resp":"Montagem","baselineStart":"2026-08-26","baselineEnd":"2026-08-27","currentStart":"2026-09-08","currentEnd":"2026-09-09","currentPercent":0},
+ {"id":"30","name":"MONTAGEM NO CLIENTE","resp":"Montagem","currentPercent":0},
+ {"id":"31","name":"TRYOUT COM O CLIENTE NA PLANTA DO CLIENTE","resp":"Montagem","currentPercent":0}
+].map(normalizeTask);
+
+const SEED_PROJECT_3 = { id: "RFQ_00145", name: "Toyota 654D — Gauge Final (Solidfer)" };
+const SEED_TASKS_3 = [
+ {"id":"1","name":"PROJETO","resp":"Solidfer","baselineStart":"2026-07-03","baselineEnd":"2026-07-31","currentStart":"2026-07-03","currentPercent":50},
+ {"id":"2","name":"APROVAÇÃO","resp":"Purem","baselineStart":"2026-07-27","baselineEnd":"2026-07-31","currentPercent":0},
+ {"id":"3","name":"COMPRA DE MATÉRIA PRIMA","resp":"Solidfer","baselineStart":"2026-07-31","baselineEnd":"2026-08-12","currentPercent":0},
+ {"id":"4","name":"USINAGEM","resp":"Solidfer","baselineStart":"2026-08-03","baselineEnd":"2026-09-04","currentPercent":0},
+ {"id":"5","name":"MONTAGEM E AJUSTES FINAIS","resp":"Solidfer","baselineStart":"2026-08-31","baselineEnd":"2026-09-07","currentPercent":0},
+ {"id":"6","name":"MEDIÇÃO","resp":"Solidfer","baselineStart":"2026-09-07","baselineEnd":"2026-09-09","currentPercent":0},
+ {"id":"7","name":"VALIDAÇÃO","resp":"Purem","baselineStart":"2026-09-09","baselineEnd":"2026-09-11","currentPercent":0},
+ {"id":"8","name":"ENTREGA","resp":"Solidfer","baselineStart":"2026-09-11","baselineEnd":"2026-09-11","currentPercent":0}
+].map(normalizeTask);
+
+const ALL_SEEDS = [
+  {proj: SEED_PROJECT_1, tasks: SEED_TASKS_1},
+  {proj: SEED_PROJECT_2, tasks: SEED_TASKS_2},
+  {proj: SEED_PROJECT_3, tasks: SEED_TASKS_3}
+];
+
+const REBASELINE_OS1326 = [{"id": "1", "name": "KICK OFF", "resp": "Engenharia", "level": 0, "isContainer": false, "na": false, "baselineStart": "2026-06-19", "baselineEnd": "2026-06-19", "currentStart": "2026-06-19", "currentEnd": "2026-06-19", "previousEnd": null, "currentPercent": 100}, {"id": "2", "name": "PLANEJAMENTO", "resp": "Engenharia", "level": 0, "isContainer": false, "na": false, "baselineStart": "2026-06-22", "baselineEnd": "2026-06-26", "currentStart": "2026-06-22", "currentEnd": "2026-06-26", "previousEnd": null, "currentPercent": 100}, {"id": "3", "name": "ESTUDO DE ESCOPO E PROJETO MEC.", "resp": "Engenharia", "level": 0, "isContainer": false, "na": false, "baselineStart": "2026-06-22", "baselineEnd": "2026-06-26", "currentStart": "2026-06-22", "currentEnd": "2026-06-26", "previousEnd": null, "currentPercent": 100}, {"id": "4", "name": "AGUARDANDO ENVIO DO 3D PRODUTOS", "resp": "Purem", "level": 0, "isContainer": false, "na": false, "baselineStart": "2026-06-19", "baselineEnd": "2026-06-25", "currentStart": "2026-06-19", "currentEnd": "2026-06-25", "previousEnd": null, "currentPercent": 100}, {"id": "5", "name": "AGUARDANDO DESENHO DISP. / MEDIÇÃO IN LOCO", "resp": "Purem / OX's", "level": 0, "isContainer": false, "na": false, "baselineStart": "2026-06-29", "baselineEnd": "2026-07-07", "currentStart": "2026-06-29", "currentEnd": "2026-07-07", "previousEnd": null, "currentPercent": 100}, {"id": "6", "name": "DESIGN REVIEW 1 — APROVAÇÃO DE CONCEITO PROJETO", "resp": "Engenharia", "level": 0, "isContainer": false, "na": false, "baselineStart": "2026-07-01", "baselineEnd": "2026-07-16", "currentStart": "2026-07-01", "currentEnd": "2026-07-16", "previousEnd": null, "currentPercent": 100}, {"id": "7", "name": "DESIGN REVIEW 2", "resp": "Engenharia", "level": 0, "isContainer": false, "na": false, "baselineStart": "2026-07-04", "baselineEnd": "2026-07-20", "currentStart": "2026-07-04", "currentEnd": "2026-07-20", "previousEnd": null, "currentPercent": 100}, {"id": "8", "name": "REVISÃO E REFINAMENTO TÉCNICO", "resp": "Engenharia", "level": 0, "isContainer": false, "na": false, "baselineStart": "2026-07-08", "baselineEnd": "2026-07-27", "currentStart": "2026-07-08", "currentEnd": "2026-07-27", "previousEnd": null, "currentPercent": 100}, {"id": "9", "name": "DETALHAMENTO", "resp": "Engenharia", "level": 0, "isContainer": false, "na": false, "baselineStart": "2026-07-13", "baselineEnd": "2026-07-30", "currentStart": "2026-07-13", "currentEnd": "2026-07-30", "previousEnd": null, "currentPercent": 100}, {"id": "10", "name": "LIBERAÇÃO DE LISTA MC, PN, HD, MP", "resp": "Engenharia", "level": 0, "isContainer": false, "na": false, "baselineStart": "2026-07-18", "baselineEnd": "2026-08-03", "currentStart": "2026-07-18", "currentEnd": "2026-08-03", "previousEnd": null, "currentPercent": 100}, {"id": "11", "name": "ALINHAMENTO ELÉTRICA", "resp": "Engenharia", "level": 0, "isContainer": false, "na": false, "baselineStart": "2026-07-08", "baselineEnd": "2026-07-22", "currentStart": "2026-07-08", "currentEnd": "2026-07-22", "previousEnd": null, "currentPercent": 100}, {"id": "12", "name": "LISTA ELÉTRICA/DIAGRAMA", "resp": "Engenharia", "level": 0, "isContainer": false, "na": true, "baselineStart": null, "baselineEnd": null, "currentStart": null, "currentEnd": null, "previousEnd": null, "currentPercent": null}, {"id": "13", "name": "MATERIAIS E RECURSOS", "resp": "Compras", "level": 0, "isContainer": true, "na": false, "baselineStart": "2026-07-22", "baselineEnd": "2026-09-09", "currentStart": "2026-07-22", "currentEnd": "2026-09-09", "previousEnd": null, "currentPercent": 60}, {"id": "14", "name": "Cotação de matéria prima", "resp": "Compras", "level": 1, "isContainer": false, "na": false, "baselineStart": "2026-07-21", "baselineEnd": "2026-08-06", "currentStart": "2026-07-21", "currentEnd": "2026-08-06", "previousEnd": null, "currentPercent": 100}, {"id": "15", "name": "Cotação de serviços de manufatura", "resp": "Compras", "level": 1, "isContainer": false, "na": false, "baselineStart": "2026-07-21", "baselineEnd": "2026-08-06", "currentStart": "2026-07-21", "currentEnd": "2026-08-06", "previousEnd": null, "currentPercent": 100}, {"id": "16", "name": "Cotação de itens comerciais", "resp": "Compras", "level": 1, "isContainer": false, "na": false, "baselineStart": "2026-07-21", "baselineEnd": "2026-08-06", "currentStart": "2026-07-21", "currentEnd": "2026-08-06", "previousEnd": null, "currentPercent": 100}, {"id": "17", "name": "Entrega de matéria prima", "resp": "Compras", "level": 1, "isContainer": false, "na": false, "baselineStart": "2026-07-25", "baselineEnd": "2026-08-19", "currentStart": "2026-07-25", "currentEnd": "2026-08-19", "previousEnd": null, "currentPercent": 60}, {"id": "18", "name": "Entrega de itens comerciais", "resp": "Compras", "level": 1, "isContainer": false, "na": false, "baselineStart": "2026-07-27", "baselineEnd": "2026-08-20", "currentStart": "2026-07-27", "currentEnd": "2026-08-20", "previousEnd": null, "currentPercent": 0}, {"id": "19", "name": "Entrega de peças de manufatura", "resp": "Compras", "level": 1, "isContainer": false, "na": false, "baselineStart": "2026-08-07", "baselineEnd": "2026-08-30", "currentStart": "2026-08-07", "currentEnd": "2026-08-30", "previousEnd": null, "currentPercent": 0}, {"id": "20", "name": "FORNECIMENTO DE MOLDES PARA INJEÇÃO DE BORRACHAS", "resp": "Purem", "level": 0, "isContainer": false, "na": false, "baselineStart": "2026-08-03", "baselineEnd": "2026-08-23", "currentStart": "2026-08-03", "currentEnd": "2026-08-23", "previousEnd": null, "currentPercent": 0}, {"id": "21", "name": "MONTAGEM MEC.", "resp": "Montagem", "level": 0, "isContainer": false, "na": false, "baselineStart": "2026-08-18", "baselineEnd": "2026-09-02", "currentStart": "2026-08-18", "currentEnd": "2026-09-02", "previousEnd": null, "currentPercent": 0}, {"id": "22", "name": "MONTAGEM PAINEL ELÉTRICO", "resp": "Montagem", "level": 0, "isContainer": false, "na": true, "baselineStart": null, "baselineEnd": null, "currentStart": null, "currentEnd": null, "previousEnd": null, "currentPercent": null}, {"id": "23", "name": "MONTAGEM PNEUM.", "resp": "Montagem", "level": 0, "isContainer": false, "na": true, "baselineStart": null, "baselineEnd": null, "currentStart": null, "currentEnd": null, "previousEnd": null, "currentPercent": null}, {"id": "24", "name": "PASSAGEM DE CABOS E INTERLIGAÇÃO", "resp": "Montagem", "level": 0, "isContainer": false, "na": true, "baselineStart": null, "baselineEnd": null, "currentStart": null, "currentEnd": null, "previousEnd": null, "currentPercent": null}, {"id": "25", "name": "PROGRAMAÇÃO ONLINE", "resp": "Engenharia", "level": 0, "isContainer": false, "na": true, "baselineStart": null, "baselineEnd": null, "currentStart": null, "currentEnd": null, "previousEnd": null, "currentPercent": null}, {"id": "26", "name": "TRYOUT INTERNO", "resp": "Montagem", "level": 0, "isContainer": false, "na": false, "baselineStart": "2026-08-21", "baselineEnd": "2026-09-03", "currentStart": "2026-08-21", "currentEnd": "2026-09-03", "previousEnd": null, "currentPercent": 0}, {"id": "27", "name": "TRYOUT COM O CLIENTE NA PLANTA DA OX'S", "resp": "Montagem", "level": 0, "isContainer": false, "na": false, "baselineStart": "2026-08-22", "baselineEnd": "2026-09-06", "currentStart": "2026-08-22", "currentEnd": "2026-09-06", "previousEnd": null, "currentPercent": 0}, {"id": "28", "name": "CORREÇÕES PÓS TRYOUT", "resp": "Montagem", "level": 0, "isContainer": false, "na": false, "baselineStart": "2026-08-25", "baselineEnd": "2026-09-07", "currentStart": "2026-08-25", "currentEnd": "2026-09-07", "previousEnd": null, "currentPercent": 0}, {"id": "29", "name": "ENTREGA", "resp": "Montagem", "level": 0, "isContainer": false, "na": false, "baselineStart": "2026-08-26", "baselineEnd": "2026-09-09", "currentStart": "2026-08-26", "currentEnd": "2026-09-09", "previousEnd": null, "currentPercent": 0}, {"id": "30", "name": "MONTAGEM NO CLIENTE", "resp": "Montagem", "level": 0, "isContainer": false, "na": false, "baselineStart": null, "baselineEnd": null, "currentStart": null, "currentEnd": null, "previousEnd": null, "currentPercent": 0}, {"id": "31", "name": "TRYOUT COM O CLIENTE NA PLANTA DO CLIENTE", "resp": "Montagem", "level": 0, "isContainer": false, "na": false, "baselineStart": null, "baselineEnd": null, "currentStart": null, "currentEnd": null, "previousEnd": null, "currentPercent": 0}].map(normalizeTask);
+
+let projects = [];
+let tasksByProject = {};
+let activeProjectId = null;
+
+function fmtDate(iso){
+  if(!iso) return '—';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+function todayISO(){
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+function daysBetween(a,b){
+  return Math.round((new Date(b) - new Date(a)) / 86400000);
+}
+
+async function loadData(){
+  try{
+    const projRes = await window.storage.get(STORAGE_PROJECTS_KEY, false);
+    projects = projRes ? JSON.parse(projRes.value) : [];
+  }catch(e){ projects = []; }
+
+  // Migração: código do processo mudou de OS-2026-1326 para RFQ_00146.
+  // Renomeia o projeto e move as tarefas salvas para a nova chave, sem perder histórico.
+  const OLD_ID = 'OS-2026-1326', NEW_ID = 'RFQ_00146';
+  const oldProj = projects.find(p=>p.id===OLD_ID);
+  if(oldProj){
+    oldProj.id = NEW_ID;
+    try{
+      const oldTasksRes = await window.storage.get(taskKey(OLD_ID), false);
+      if(oldTasksRes){
+        await window.storage.set(taskKey(NEW_ID), oldTasksRes.value, false);
+        await window.storage.delete(taskKey(OLD_ID), false);
+      }
+    }catch(e){}
+    await window.storage.set(STORAGE_PROJECTS_KEY, JSON.stringify(projects), false);
+  }
+
+  let projectsChanged = false;
+  for(const seed of ALL_SEEDS){
+    if(!projects.find(p=>p.id===seed.proj.id)){
+      projects.push({...seed.proj, createdAt: new Date().toISOString()});
+      await window.storage.set(taskKey(seed.proj.id), JSON.stringify(seed.tasks), false);
+      projectsChanged = true;
+    }
+  }
+  if(projectsChanged){
+    await window.storage.set(STORAGE_PROJECTS_KEY, JSON.stringify(projects), false);
+  }
+
+  tasksByProject = {};
+  for(const p of projects){
+    try{
+      const tRes = await window.storage.get(taskKey(p.id), false);
+      tasksByProject[p.id] = tRes ? JSON.parse(tRes.value).map(normalizeTask) : [];
+    }catch(e){
+      tasksByProject[p.id] = [];
+    }
+  }
+
+  // Recalcular baseline (pedido explícito): RFQ_00146 (ex-OS-2026-1326) passa a usar
+  // Início Prog. como início e Término Real como fim do baseline.
+  // Roda uma única vez por conta (marcador em storage), preservando o baseline depois disso.
+  const REBASE_FLAG_V2 = 'rebase:OS-2026-1326:v2';
+  const REBASE_FLAG = 'rebase:RFQ_00146:v2';
+  try{
+    const flagOld = await window.storage.get(REBASE_FLAG_V2, false);
+    const flagNew = await window.storage.get(REBASE_FLAG, false);
+    if(!flagOld && !flagNew && tasksByProject[NEW_ID]){
+      tasksByProject[NEW_ID] = REBASELINE_OS1326;
+      await saveTasksSilent(NEW_ID);
+      await window.storage.set(REBASE_FLAG, 'done', false);
+    }
+  }catch(e){
+    if(tasksByProject[NEW_ID]){
+      tasksByProject[NEW_ID] = REBASELINE_OS1326;
+      await saveTasksSilent(NEW_ID);
+      try{ await window.storage.set(REBASE_FLAG, 'done', false); }catch(e2){}
+    }
+  }
+
+  // Correção pontual (não mexe em mais nada): MATERIAIS E RECURSOS recebe prazo de
+  // baseline em 09/09/2026 — o dado original da fonte estava corrompido ("13/1/00").
+  // Aplica sem sobrescrever edições que você já tenha feito em outras tarefas.
+  const PATCH_FLAG = 'patch:RFQ_00146:materiais-e-recursos-prazo:v1';
+  try{
+    const patched = await window.storage.get(PATCH_FLAG, false);
+    if(!patched && tasksByProject[NEW_ID]){
+      const t13 = tasksByProject[NEW_ID].find(t=>t.id==='13');
+      if(t13){
+        t13.baselineEnd = '2026-09-09';
+        if(!t13.currentEnd) t13.currentEnd = '2026-09-09';
+        await saveTasksSilent(NEW_ID);
+      }
+      await window.storage.set(PATCH_FLAG, 'done', false);
+    }
+  }catch(e){}
+
+  activeProjectId = projects[0].id;
+}
+
+async function saveTasksSilent(pid){
+  await window.storage.set(taskKey(pid), JSON.stringify(tasksByProject[pid]), false);
+}
+
+async function saveTasks(pid){
+  await window.storage.set(taskKey(pid), JSON.stringify(tasksByProject[pid]), false);
+  flashSaved();
+}
+let flashTimer;
+function flashSaved(){
+  const el = document.getElementById('saveFlag');
+  el.classList.add('show');
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(()=>el.classList.remove('show'), 1100);
+}
+
+// ---------- Agregação de containers (tarefas-resumo) ----------
+function effectiveTasks(ts){
+  // Retorna a lista com containers tendo seu % e status recalculados como
+  // média das subatividades diretas (nunca editados manualmente).
+  return ts.map(t=>{
+    if(!t.isContainer) return t;
+    const children = ts.filter(c => c.level === t.level+1 &&
+      ts.indexOf(c) > ts.indexOf(t) &&
+      ts.slice(ts.indexOf(t)+1, ts.indexOf(c)).every(m=>m.level>t.level));
+    const valid = children.filter(c=>!c.na);
+    const pct = valid.length ? Math.round(valid.reduce((s,c)=>s+(c.currentPercent||0),0)/valid.length) : t.currentPercent;
+    const ends = valid.map(c=>c.currentEnd).filter(Boolean);
+    const starts = valid.map(c=>c.currentStart).filter(Boolean);
+    return {
+      ...t,
+      currentPercent: pct,
+      currentEnd: ends.length ? ends.sort().slice(-1)[0] : t.currentEnd,
+      currentStart: starts.length ? starts.sort()[0] : t.currentStart
+    };
+  });
+}
+
+function computeStatus(t){
+  if(t.na) return {label:'N/A', cls:'planejado'};
+  const today = todayISO();
+  if(t.currentPercent >= 100) return {label:'Concluído', cls:'concluido'};
+  const refEnd = t.currentEnd || t.baselineEnd;
+  if(refEnd && refEnd < today) return {label:'Atrasado', cls:'atrasado'};
+  if(t.currentPercent > 0) return {label:'Em andamento', cls:'planejado'};
+  return {label:'Planejado', cls:'planejado'};
+}
+function computeDeviationDays(t){
+  if(t.na || !t.baselineEnd) return 0;
+  if(t.currentEnd) return daysBetween(t.baselineEnd, t.currentEnd);
+  if(t.currentPercent < 100){
+    const today = todayISO();
+    if(t.baselineEnd < today) return daysBetween(t.baselineEnd, today);
+  }
+  return 0;
+}
+function computeReadjustDays(t){
+  // Quanto a data atual se moveu desde o último ajuste feito manualmente nesta tarefa.
+  // Diferente do desvio vs. baseline: aqui comparamos com o valor anterior salvo, não com o baseline original.
+  if(t.na || t.isContainer || !t.previousEnd || !t.currentEnd) return null;
+  return daysBetween(t.previousEnd, t.currentEnd);
+}
+function deviationLabel(dev){
+  if(!dev) return {text:'no prazo', cls:'zero'};
+  if(dev > 0) return {text:`+${dev}d atraso`, cls:'pos'};
+  return {text:`${Math.abs(dev)}d adiant.`, cls:'neg'};
+}
+function readjustLabel(dev){
+  if(dev === null) return {text:'—', cls:'zero'};
+  if(dev === 0) return {text:'sem alteração', cls:'zero'};
+  if(dev > 0) return {text:`+${dev}d`, cls:'pos'};
+  return {text:`${dev}d`, cls:'neg'};
+}
+
+function renderOverview(){
+  const el = document.getElementById('overviewView');
+  const allTasks = projects.flatMap(p => effectiveTasks(tasksByProject[p.id]||[])
+    .filter(t=>!t.isContainer && !t.na)
+    .map(t => ({...t, _proj: p})));
+
+  const totalTasks = allTasks.length;
+  const doneTasks = allTasks.filter(t=>t.currentPercent>=100).length;
+  const overallPct = totalTasks ? Math.round(allTasks.reduce((s,t)=>s+(t.currentPercent||0),0)/totalTasks) : 0;
+  const lateTasks = allTasks.filter(t=>t.currentPercent<100 && (t.currentEnd||t.baselineEnd) < todayISO());
+  const upcoming = allTasks.filter(t=>t.currentPercent<100 && t.baselineEnd && t.baselineEnd >= todayISO())
+                            .sort((a,b)=>a.baselineEnd.localeCompare(b.baselineEnd)).slice(0,6);
+  const worstDeviation = allTasks.map(t=>({...t, dev:computeDeviationDays(t)}))
+                                  .filter(t=>t.dev !== 0)
+                                  .sort((a,b)=>b.dev-a.dev).slice(0,6);
+
+  let html = '';
+  html += `<div class="cards">
+    <div class="card"><div class="num">${projects.length}</div><div class="lbl">Projetos ativos</div></div>
+    <div class="card"><div class="num">${overallPct}%</div><div class="lbl">Conclusão consolidada</div></div>
+    <div class="card ok"><div class="num">${doneTasks}/${totalTasks}</div><div class="lbl">Atividades concluídas</div></div>
+    <div class="card ${lateTasks.length?'late':''}"><div class="num">${lateTasks.length}</div><div class="lbl">Atividades atrasadas</div></div>
+  </div>`;
+
+  html += `<div class="panel"><div class="panel-h">Conclusão por projeto</div><table><thead><tr>
+    <th>Projeto</th><th>Atividades</th><th>Concluído</th><th>% Progresso</th><th>Atrasadas</th>
+  </tr></thead><tbody>`;
+  for(const p of projects){
+    const ts = effectiveTasks(tasksByProject[p.id]||[]).filter(t=>!t.isContainer && !t.na);
+    const done = ts.filter(t=>t.currentPercent>=100).length;
+    const pct = ts.length ? Math.round(ts.reduce((s,t)=>s+(t.currentPercent||0),0)/ts.length) : 0;
+    const late = ts.filter(t=>t.currentPercent<100 && (t.currentEnd||t.baselineEnd) < todayISO()).length;
+    html += `<tr>
+      <td class="name">${p.name}<div class="id">${p.id}</div></td>
+      <td>${ts.length}</td>
+      <td>${done}</td>
+      <td style="min-width:140px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="bar-bg" style="flex:1;"><div class="bar-fg" style="width:${pct}%"></div></div>
+          <span class="dates">${pct}%</span>
+        </div>
+      </td>
+      <td>${late ? `<span class="status atrasado">${late}</span>` : '<span class="dates">0</span>'}</td>
+    </tr>`;
+  }
+  html += `</tbody></table></div>`;
+
+  html += `<div class="panel"><div class="panel-h">Atividades atrasadas<span class="cnt">data atual x baseline</span></div>`;
+  if(lateTasks.length===0){
+    html += `<div class="empty">Nenhuma atividade atrasada no momento.</div>`;
+  } else {
+    html += `<table><thead><tr><th>Projeto</th><th>Atividade</th><th>Responsável</th><th>Fim (baseline)</th><th>Desvio</th></tr></thead><tbody>`;
+    for(const t of lateTasks.sort((a,b)=>computeDeviationDays(b)-computeDeviationDays(a))){
+      const dev = computeDeviationDays(t);
+      const dl = deviationLabel(dev);
+      html += `<tr>
+        <td class="dates">${t._proj.id}</td>
+        <td class="name">${t.name}</td>
+        <td class="resp">${t.resp}</td>
+        <td class="dates">${fmtDate(t.baselineEnd)}</td>
+        <td class="dev ${dl.cls}">${dl.text}</td>
+      </tr>`;
+    }
+    html += `</tbody></table>`;
+  }
+  html += `</div>`;
+
+  html += `<div class="panel"><div class="panel-h">Maior desvio de baseline</div>`;
+  if(worstDeviation.length===0){
+    html += `<div class="empty">Nenhum desvio registrado — tudo dentro do baseline.</div>`;
+  } else {
+    html += `<table><thead><tr><th>Projeto</th><th>Atividade</th><th>Baseline fim</th><th>Desvio</th></tr></thead><tbody>`;
+    for(const t of worstDeviation){
+      const dl = deviationLabel(t.dev);
+      html += `<tr>
+        <td class="dates">${t._proj.id}</td>
+        <td class="name">${t.name}</td>
+        <td class="dates">${fmtDate(t.baselineEnd)}</td>
+        <td class="dev ${dl.cls}">${dl.text}</td>
+      </tr>`;
+    }
+    html += `</tbody></table>`;
+  }
+  html += `</div>`;
+
+  html += `<div class="panel"><div class="panel-h">Próximas atividades a vencer</div>`;
+  if(upcoming.length===0){
+    html += `<div class="empty">Nenhuma atividade planejada pendente.</div>`;
+  } else {
+    html += `<table><thead><tr><th>Projeto</th><th>Atividade</th><th>Responsável</th><th>Início</th><th>Fim</th></tr></thead><tbody>`;
+    for(const t of upcoming){
+      html += `<tr>
+        <td class="dates">${t._proj.id}</td>
+        <td class="name">${t.name}</td>
+        <td class="resp">${t.resp}</td>
+        <td class="dates">${fmtDate(t.baselineStart)}</td>
+        <td class="dates">${fmtDate(t.baselineEnd)}</td>
+      </tr>`;
+    }
+    html += `</tbody></table>`;
+  }
+  html += `</div>`;
+
+  el.innerHTML = html;
+}
+
+function renderProjectSelector(){
+  if(projects.length <= 1) return '';
+  let opts = projects.map(p=>`<option value="${p.id}" ${p.id===activeProjectId?'selected':''}>${p.name}</option>`).join('');
+  return `<select id="projSelect" style="background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:4px;padding:6px 10px;font-family:var(--mono);font-size:12px;margin-bottom:16px;">${opts}</select>`;
+}
+
+function renderProjectView(){
+  const el = document.getElementById('projectView');
+  const p = projects.find(pr=>pr.id===activeProjectId);
+  const rawTs = tasksByProject[activeProjectId] || [];
+  const ts = effectiveTasks(rawTs);
+
+  let html = renderProjectSelector();
+  html += `<div class="panel">
+    <div class="panel-h">${p.name} <span class="cnt">${p.id} · ${ts.filter(t=>!t.isContainer).length} atividades</span></div>
+    <table><thead><tr>
+      <th>Nº</th><th></th><th>Atividade</th><th>Resp.</th><th>Baseline</th><th>% atual</th><th>Término real</th><th>Status</th><th>Desvio vs. Baseline</th><th>Reajuste (última edição)</th>
+    </tr></thead><tbody>`;
+
+  for(const t of ts){
+    if(t.na){
+      html += `<tr data-tid="${t.id}" style="opacity:.55;">
+        <td class="id">${t.id}</td><td></td>
+        <td class="name" style="padding-left:${8+t.level*18}px;">${t.name}</td>
+        <td class="resp">${t.resp}</td>
+        <td class="dates">—</td><td class="dates">—</td><td class="dates">—</td>
+        <td><span class="status planejado">N/A</span></td>
+        <td class="dev zero">—</td>
+        <td class="dev zero">—</td>
+      </tr>`;
+      continue;
+    }
+    const status = computeStatus(t);
+    const dev = computeDeviationDays(t);
+    const dl = deviationLabel(dev);
+    const rdev = computeReadjustDays(t);
+    const rl = readjustLabel(rdev);
+    const isContainer = t.isContainer;
+    html += `<tr data-tid="${t.id}" ${isContainer?'style="background:var(--panel2);"':''}>
+      <td class="id">${t.id}</td>
+      <td>${isContainer ? '' : `<input type="checkbox" class="chk-done" ${t.currentPercent>=100?'checked':''}>`}</td>
+      <td class="name" style="padding-left:${8+t.level*18}px;">${isContainer?'▾ ':''}${t.name}</td>
+      <td class="resp">${t.resp}</td>
+      <td class="dates">${fmtDate(t.baselineStart)} → ${fmtDate(t.baselineEnd)}</td>
+      <td>${isContainer
+          ? `<span class="dates">${t.currentPercent}%</span>`
+          : `<input type="number" class="pct pct-input" min="0" max="100" value="${t.currentPercent}">`}</td>
+      <td>${isContainer
+          ? `<span class="dates">${fmtDate(t.currentEnd)}</span>`
+          : `<input type="date" class="date-input end-input ${t.currentEnd?'':'unset'}" value="${t.currentEnd||''}">`}</td>
+      <td><span class="status ${status.cls}">${status.label}</span></td>
+      <td class="dev ${dl.cls}">${dl.text}</td>
+      <td class="dev ${rl.cls}">${rl.text}</td>
+    </tr>`;
+  }
+  html += `</tbody></table></div>`;
+  if(rawTs.some(t=>t.name==='MATERIAIS E RECURSOS')){
+    html += `<div class="foot-note" style="margin-top:-10px;">⚠ "MATERIAIS E RECURSOS" é uma tarefa-resumo — % e término real são calculados automaticamente a partir das subatividades de compras. O arquivo original trazia um "término real" inválido (13/1/00) para essa linha; deixamos em branco em vez de adivinhar.</div>`;
+  }
+  el.innerHTML = html;
+
+  const sel = document.getElementById('projSelect');
+  if(sel){
+    sel.addEventListener('change', (e)=>{
+      activeProjectId = e.target.value;
+      renderProjectView();
+    });
+  }
+
+  el.querySelectorAll('tr[data-tid]').forEach(row=>{
+    const tid = row.getAttribute('data-tid');
+    const task = rawTs.find(t=>t.id===tid);
+    if(!task || task.isContainer || task.na) return;
+
+    const chk = row.querySelector('.chk-done');
+    if(chk){
+      chk.addEventListener('change', async (e)=>{
+        task.currentPercent = e.target.checked ? 100 : 0;
+        if(e.target.checked && !task.currentEnd) task.currentEnd = todayISO();
+        await saveTasks(activeProjectId);
+        refreshAll();
+      });
+    }
+
+    const pctInput = row.querySelector('.pct-input');
+    if(pctInput){
+      pctInput.addEventListener('change', async (e)=>{
+        let v = parseInt(e.target.value,10);
+        if(isNaN(v)) v = 0;
+        v = Math.max(0, Math.min(100, v));
+        task.currentPercent = v;
+        await saveTasks(activeProjectId);
+        refreshAll();
+      });
+    }
+
+    const endInput = row.querySelector('.end-input');
+    if(endInput){
+      endInput.addEventListener('change', async (e)=>{
+        const newVal = e.target.value || null;
+        if(newVal && newVal !== task.currentEnd){
+          task.previousEnd = task.currentEnd || task.baselineEnd;
+        }
+        task.currentEnd = newVal;
+        if(!task.currentStart) task.currentStart = task.currentEnd;
+        await saveTasks(activeProjectId);
+        refreshAll();
+      });
+    }
+  });
+}
+
+function setHeader(){
+  const totalTasks = projects.reduce((s,p)=>s+(tasksByProject[p.id]||[]).filter(t=>!t.isContainer).length,0);
+  document.getElementById('headerSub').textContent =
+    `${projects.length} projeto(s) · ${totalTasks} atividades rastreadas · atualizado ${fmtDate(todayISO())}`;
+  document.getElementById('topbarRight').textContent = fmtDate(todayISO());
+  document.getElementById('footNote').textContent =
+    `Dados persistidos localmente por conta (window.storage). Baseline preservado desde a extração original de cada cronograma — use "recalcular baseline" para redefini-lo.`;
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+  document.getElementById('overviewView').style.display = name==='overview' ? '' : 'none';
+  document.getElementById('projectView').style.display = name==='project' ? '' : 'none';
+  if(name==='overview'){
+    setHeader();
+    renderOverview();
+  }
+}
+
+function refreshAll(){
+  setHeader();
+  renderOverview();
+  renderProjectView();
+}
+
+document.querySelectorAll('.tab').forEach(b=>{
+  b.addEventListener('click', ()=>switchTab(b.dataset.tab));
+});
+
+(async function init(){
+  await loadData();
+  setHeader();
+  renderOverview();
+  renderProjectView();
+})();
+</script>
+</body>
+</html>
