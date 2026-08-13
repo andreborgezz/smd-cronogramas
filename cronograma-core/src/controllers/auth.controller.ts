@@ -1,24 +1,24 @@
 import { type Request, type Response } from 'express';
-import db from '../../database.js';
+import { db } from '../../database.js';
 import bcrypt from 'bcryptjs';
 import jsonwebtoken from 'jsonwebtoken';
 
 export const loginUsuario = async (req: Request, res: Response) => {
     try{
-        const { email, senha } = req.body;
-        const query = 'SELECT * FROM usuarios WHERE email = $1';
+        const { email, password } = req.body;
+        const query = 'SELECT * FROM users WHERE email = $1';
         const values = [email];
         const result = await db.query(query, values);
         if (result.rows.length === 0) {
             return res.status(401).json({ message: 'Usuário não encontrado.' });
         }
         const user = result.rows[0];
-        const isMatch = await bcrypt.compare(senha, user.senha);
+        const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(401).json({ message: 'credenciais inválidas' });
         }
         const token = jsonwebtoken.sign(
-    { id_usuario: user.id_usuario, acesso: user.acesso },
+    { id: user.id, email: user.email },
     process.env.JWT_SECRET as string,
     { expiresIn: '12h' }
 );
