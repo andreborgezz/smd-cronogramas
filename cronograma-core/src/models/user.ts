@@ -1,8 +1,8 @@
-export interface user {
-    id: number;
+export interface project {
+    id: string;// código do projeto, ex: "RFQ_00146"
     name: string;
-    email: string;
-    password: string;
+    createdBy: string | null;
     createdAt: Date;
     updatedAt: Date;
 };
+ 
